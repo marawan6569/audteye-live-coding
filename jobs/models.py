@@ -44,7 +44,7 @@ class Job(models.Model):
     celery_task_id = models.UUIDField(null=True, blank=True)
     max_retries_number = models.IntegerField(default=3)
     retry_count = models.IntegerField(default=0)
-    error_message = models.TextField(null=True, blank=True)
+    error_messages = models.JSONField(null=True, blank=True)  # list of error strings
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

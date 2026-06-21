@@ -51,16 +51,20 @@ def process_job(self, job_id):
         except ProviderInvalidPrompt as e:
             # Permanent failure — do NOT retry
             job.status = Job.FAILED
-            job.error_message = str(e)
-            job.save(update_fields=["status", "error_message", "updated_at"])
+            errors = job.error_messages or []
+            errors.append(str(e))
+            job.error_messages = errors
+            job.save(update_fields=["status", "error_messages", "updated_at"])
             logger.warning("Job %s failed permanently: %s", job_id, e)
             return
 
         except TRANSIENT_EXCEPTIONS as e:
             # Transient failure — retry with exponential backoff
             job.retry_count = self.request.retries + 1
-            job.error_message = str(e)
-            job.save(update_fields=["retry_count", "error_message", "updated_at"])
+            errors = job.error_messages or []
+            errors.append(str(e))
+            job.error_messages = errors
+            job.save(update_fields=["retry_count", "error_messages", "updated_at"])
             logger.info(
                 "Job %s hit transient error (attempt %d/%d): %s",
                 job_id, job.retry_count, job.max_retries_number, e,

@@ -69,5 +69,5 @@ def get_job(request, job_id):
         "job_id": job.id,
         "status": job.status,
         "result": job.result,
-        "error_message": job.error_message,
+        "error_messages": job.error_messages,
     })
