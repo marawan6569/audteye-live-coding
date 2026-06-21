@@ -68,6 +68,6 @@ def get_job(request, job_id):
     return JsonResponse({
         "job_id": job.id,
         "status": job.status,
-        "image_url": job.image_url,
-        "cost_usd": job.cost_usd,
+        "result": job.result,
+        "error_message": job.error_message,
     })

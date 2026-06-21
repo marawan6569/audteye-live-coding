@@ -49,14 +49,12 @@ class Job(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     
 
-    # result
-    image_url = models.URLField(null=True, blank=True)
-    cost_usd = models.FloatField(null=True, blank=True)
+    # result — list of {"image_url": "...", "cost_usd": 0.04} dicts
+    result = models.JSONField(null=True, blank=True)
 
     class Meta:
         ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=["idempotency_key"]),
             models.Index(fields=["user_id", "status"]),
         ]
 
