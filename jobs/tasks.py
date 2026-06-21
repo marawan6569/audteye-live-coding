@@ -70,11 +70,17 @@ def process_job(self, job_id):
                 "Job %s hit transient error (attempt %d/%d): %s",
                 job_id, job.retry_count, job.max_retries_number, e,
             )
-            raise self.retry(
-                exc=e,
-                countdown=2 ** self.request.retries,  # 1s, 2s, 4s, 8s ...
-                max_retries=job.max_retries_number,
-            )
+            try:
+                raise self.retry(
+                    exc=e,
+                    countdown=2 ** self.request.retries,  # 1s, 2s, 4s, 8s ...
+                    max_retries=job.max_retries_number,
+                )
+            except self.MaxRetriesExceededError:
+                job.status = Job.FAILED
+                job.save(update_fields=["status", "updated_at"])
+                logger.error("Job %s failed after %d retries.", job_id, job.retry_count)
+                return
 
     # All images generated successfully
     job.status = Job.COMPLETED
