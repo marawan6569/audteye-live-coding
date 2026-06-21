@@ -33,7 +33,8 @@ def process_job(self, job_id):
         return
 
     job.status = Job.PROCESSING
-    job.save(update_fields=["status", "updated_at"])
+    job.celery_task_id = self.request.id
+    job.save(update_fields=["status", "celery_task_id", "updated_at"])
 
     results = job.result or []
 

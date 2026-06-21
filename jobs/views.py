@@ -1,5 +1,6 @@
 import uuid
 import json
+from django.db import IntegrityError, transaction
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
@@ -36,24 +37,23 @@ def create_job(request):
     if not user_id or not prompt or not num_images:
         return JsonResponse({"error": "Missing required fields"}, status=400)
 
-    job = Job.objects.filter(idempotency_key=idempotency_key).first()
-
-    if job:
+    # Idempotency: rely on the unique constraint instead of filter-then-create
+    # to avoid TOCTOU race between concurrent requests.
+    try:
+        job = Job.objects.create(
+            user_id=user_id,
+            prompt=prompt,
+            number_of_images=num_images,
+            idempotency_key=idempotency_key,
+        )
+    except IntegrityError:
+        job = Job.objects.get(idempotency_key=idempotency_key)
         return JsonResponse({"message": "Already processed", "job_id": job.id})
 
-    job = Job.objects.create(
-        user_id=user_id,
-        prompt=prompt,
-        number_of_images=num_images,
-        idempotency_key=idempotency_key,
-    )
+    # Dispatch after commit so the worker never sees a DoesNotExist
+    transaction.on_commit(lambda: process_job.delay(job.id))
 
-    task = process_job.delay(job.id)
-
-    job.celery_task_id = task.id
-    job.save()
-
-    return JsonResponse({"job_id": job.id, "task_id": task.id})
+    return JsonResponse({"job_id": job.id}, status=201)
 
 
 def get_job(request, job_id):
